@@ -115,6 +115,8 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
         resolve: (approved: boolean) => void;
     } | null>(null);
     const [isYoloMode, setIsYoloMode] = useState(yoloMode);
+    const [toolArgs, setToolArgs] = useState<Record<string, unknown> | null>(null);
+
 
     // Initialize components
     const [apiClient] = useState(() => new APIClient({ apiKey }));
@@ -256,20 +258,20 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     onChunk: (chunk) => {
                         setStreamingContent((prev) => prev + chunk);
                     },
-                    onToolStart: (name) => {
+                    onToolStart: (name, args?: Record<string, unknown>) => {
                         setCurrentTool(name);
+                        setToolArgs(args || null);
                         setMessages((prev) => [
                             ...prev,
-                            { role: 'tool', content: `🔧 Running: ${name}...` },
+                            { role: 'tool', content: `🔧 Calling: ${name}${args ? ` (${Object.keys(args).join(', ')})` : ''}` },
                         ]);
                     },
-                    onToolEnd: (name, result) => {
+                    onToolEnd: (name, _result) => {
                         setCurrentTool(null);
-                        const truncated =
-                            result.length > 500 ? result.substring(0, 500) + '...' : result;
+                        setToolArgs(null);
                         setMessages((prev) => [
                             ...prev,
-                            { role: 'tool', content: `✓ ${name}:\n${truncated}` },
+                            { role: 'tool', content: `✅ ${name} completed` },
                         ]);
                     },
                 });
@@ -380,11 +382,21 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     </Box>
                 )}
 
-                {/* Current tool */}
+                {/* Current tool - Enhanced display */}
                 {currentTool && (
-                    <Box marginLeft={2}>
-                        <Spinner type="dots" />
-                        <Text color={COLORS.info}> Running {currentTool}...</Text>
+                    <Box flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={2} paddingY={1} marginY={1}>
+                        <Box>
+                            <Spinner type="dots" />
+                            <Text color="magenta" bold> ⚡ TOOL CALL: </Text>
+                            <Text color="white" bold>{currentTool}</Text>
+                        </Box>
+                        {toolArgs && (
+                            <Box marginTop={1} marginLeft={2}>
+                                <Text color="gray">
+                                    {JSON.stringify(toolArgs, null, 2).substring(0, 300)}
+                                </Text>
+                            </Box>
+                        )}
                     </Box>
                 )}
 

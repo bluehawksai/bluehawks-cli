@@ -59,7 +59,7 @@ export class Agent {
     async run(
         userMessage: string,
         onChunk?: (content: string) => void,
-        onToolStart?: (name: string) => void,
+        onToolStart?: (name: string, args?: Record<string, unknown>) => void,
         onToolEnd?: (name: string, result: string) => void
     ): Promise<AgentResponse> {
         // Initialize with system message
@@ -154,7 +154,7 @@ export class Agent {
                     continue;
                 }
 
-                onToolStart?.(toolName);
+                onToolStart?.(toolName, toolInput);
                 const startTime = Date.now();
 
                 try {

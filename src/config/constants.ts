@@ -10,7 +10,7 @@ export const DEFAULT_RERANK_MODEL = 'Qwen/Qwen3-Reranker-0.6B';
 
 // CLI Metadata
 export const CLI_NAME = 'bluehawks';
-export const CLI_VERSION = '1.0.10';
+export const CLI_VERSION = '1.0.11';
 export const CLI_DESCRIPTION = 'A production-ready multi-agent AI CLI assistant';
 
 // Configuration Paths
