@@ -4,7 +4,6 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Text, Box, useInput, useApp } from 'ink';
-import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
 import { APIClient } from '../core/api/client.js';
 import { Orchestrator } from '../core/agents/orchestrator.js';
@@ -31,9 +30,8 @@ const Footer: React.FC<{ model: string; projectPath: string }> = ({ model, proje
         : projectPath;
 
     return (
-        <Box flexDirection="row" marginTop={0} paddingTop={0}>
+        <Box flexDirection="row" marginTop={1} justifyContent="space-between" width="100%">
             <Text color="gray">{relativePath}</Text>
-            <Box flexGrow={1} />
             <Text color="gray">Auto ({model})</Text>
         </Box>
     );
@@ -74,7 +72,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<MessageDisplay[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [currentTool, setCurrentTool] = useState<string | null>(null);
+    // const [currentTool, setCurrentTool] = useState<string | null>(null); // Removed to avoid unused var
     const [streamingContent, setStreamingContent] = useState('');
     const [pendingApproval, setPendingApproval] = useState<{
         toolName: string;
@@ -130,15 +128,12 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
 
         // Cleanup: trigger Stop hook and auto-save session on exit
         return () => {
-            // CRITICAL: Call onExit SYNCHRONOUSLY before async operations
-            // This ensures stats are captured before the process exits
             if (!exitCalledRef.current && onExit) {
                 exitCalledRef.current = true;
                 const stats = sessionManager.getStats();
                 onExit(stats, sessionManager.getSessionId());
             }
 
-            // Async cleanup for hooks and session save (non-critical)
             const cleanup = async () => {
                 const stats = sessionManager.getStats();
                 const stopContext: StopInput = {
@@ -176,11 +171,9 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     orchestrator,
                     toolRegistry,
                     onExit: () => {
-                        // Get stats before exit and call callback
                         if (!exitCalledRef.current && onExit) {
                             exitCalledRef.current = true;
                             const stats = sessionManager.getStats();
-                            console.log('DEBUG: App.tsx onExit triggered', stats.messageCount);
                             onExit(stats, sessionManager.getSessionId());
                         }
                         exit();
@@ -227,7 +220,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                         setStreamingContent((prev) => prev + chunk);
                     },
                     onToolStart: (name, args?: Record<string, unknown>) => {
-                        setCurrentTool(name);
+                        // setCurrentTool(name);
                         setMessages((prev) => [
                             ...prev,
                             {
@@ -237,7 +230,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                         ]);
                     },
                     onToolEnd: (name, result) => {
-                        setCurrentTool(null);
+                        // setCurrentTool(null);
                         setMessages((prev) => [
                             ...prev,
                             {
@@ -272,7 +265,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
             } finally {
                 setIsProcessing(false);
                 setStreamingContent('');
-                setCurrentTool(null);
+                // setCurrentTool(null);
             }
         },
         [isProcessing, orchestrator, sessionManager, exit, toolExecutor, isYoloMode]
@@ -335,7 +328,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                                     </Box>
                                 );
                             }
-                            return null; // Skip tool_start in history to reduce noise
+                            return null; // Skip tool_start in history (noise)
                         } catch {
                             return <Box key={i}><Text color="gray">🔧 {msg.content}</Text></Box>;
                         }
@@ -377,18 +370,17 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     </Box>
                 )}
 
-                {/* Approval prompt as a Status Message */}
+                {/* Approval prompt */}
                 {pendingApproval && (
-                    <Box flexDirection="row" marginTop={1} paddingX={0}>
-                        <Text color="yellow">? </Text>
-                        <Text color="white" bold>Waiting for user confirmation: </Text>
-                        <Text color="yellow">{pendingApproval.toolName}</Text>
-                        <Text color="gray"> [y/N]</Text>
+                    <Box flexDirection="column" borderStyle="single" borderColor="yellow" paddingX={1} marginTop={1}>
+                        <Text color={COLORS.warning} bold>Action Required: {pendingApproval.toolName}</Text>
+                        <Text color="white">Args: {JSON.stringify(pendingApproval.args).substring(0, 100)}...</Text>
+                        <Text color="gray">[Y]es / [N]o</Text>
                     </Box>
                 )}
             </Box>
 
-            {/* Input / Status Area */}
+            {/* Input Area - Command Bar Style */}
             {!pendingApproval && (
                 <Box flexDirection="column" marginTop={1}>
                     {/* Separator Line */}
@@ -397,12 +389,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     <Box>
                         <Text color={COLORS.primary} bold>❯ </Text>
                         {isProcessing ? (
-                            <Box>
-                                <Spinner type="dots" />
-                                <Text color={COLORS.muted}>
-                                    {currentTool ? ` Executing ${currentTool}...` : ' Thinking...'}
-                                </Text>
-                            </Box>
+                            <Text color={COLORS.muted}>Thinking...</Text>
                         ) : (
                             <TextInput
                                 value={input}
@@ -423,9 +410,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
             )}
 
             {/* Footer */}
-            <Box marginTop={1}>
-                <Footer model={apiClient.currentModel} projectPath={process.cwd()} />
-            </Box>
+            <Footer model={apiClient.currentModel} projectPath={process.cwd()} />
         </Box>
     );
 };

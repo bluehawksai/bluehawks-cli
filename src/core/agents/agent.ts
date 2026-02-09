@@ -55,8 +55,6 @@ export class Agent {
         } else {
             this.tools = toolRegistry.getDefinitions();
         }
-        // DEBUG: Verify tools
-        console.log('DEBUG: Agent tools:', this.tools.map(t => t.function.name).join(', '));
     }
 
     async run(
