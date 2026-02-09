@@ -103,23 +103,30 @@ export class Agent {
             }
             this.messages.push(assistantMessage);
 
-            // If no tool calls, we're done - output the response
-            if (!message.tool_calls || message.tool_calls.length === 0) {
-                let content = typeof message.content === 'string' ? message.content : '';
+            // Stream content if available in this turn
+            let turnContent = typeof message.content === 'string' ? message.content : '';
+            turnContent = turnContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-                // Filter out <think> tags for models that output reasoning
-                content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+            if (turnContent) {
+                if (finalContent) finalContent += '\n\n';
+                finalContent += turnContent;
 
-                finalContent = content;
-                // Simulate streaming by outputting content progressively
-                if (onChunk && finalContent) {
-                    // Output in small chunks for streaming effect
-                    const words = finalContent.split(' ');
-                    for (const word of words) {
-                        onChunk(word + ' ');
-                        await new Promise(r => setTimeout(r, 20)); // Small delay for streaming effect
+                if (onChunk) {
+                    const isFinalTurn = !message.tool_calls || message.tool_calls.length === 0;
+                    if (isFinalTurn) {
+                        const words = turnContent.split(' ');
+                        for (const word of words) {
+                            onChunk(word + ' ');
+                            await new Promise(r => setTimeout(r, 20));
+                        }
+                    } else {
+                        onChunk(turnContent + '\n\n');
                     }
                 }
+            }
+
+            // If no tool calls, we're done
+            if (!message.tool_calls || message.tool_calls.length === 0) {
                 break;
             }
 

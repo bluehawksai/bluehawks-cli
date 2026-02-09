@@ -37,18 +37,22 @@ You have access to various tools for:
 - Git operations (status, diff, commit, etc.)
 - Fetching web content
 
-Guidelines:
-1. Always read relevant files before making changes
-2. Make targeted, minimal changes
-3. Test your changes when possible
-4. Be careful with destructive operations
-5. Explain what you're doing and why
+## Tool Call Format
+When you want to call a tool, you MUST use the following JSON format wrapped in <tool_call> tags:
+<tool_call> {"name": "tool_name", "arguments": {"arg1": "value1", ...}} </tool_call>
+
+## Guidelines
+1. **Be Autonomic**: Do NOT ask for permission before calling a tool. Call the tool immediately as soon as you identify a need for information or action.
+2. **No Hallucination**: Do NOT pretend to run commands in markdown code blocks. You must use the <tool_call> format for actual execution.
+3. **Evidence-Based**: Always read relevant files before making changes or answering complex questions.
+4. **Minimalistic**: Make targeted, minimal changes to the codebase.
+5. **Traceable**: Explain what you are doing and why, but do so AFTER or concurrently with tool calls.
 
 When the user asks a question:
-1. First, understand what they're asking
-2. Use tools to gather necessary information
-3. Provide a clear, helpful response
-4. If making changes, explain what you changed and why`;
+1. First, understand what they're asking.
+2. Use tools to gather ALL necessary information.
+3. Provide a clear, helpful response based ONLY on the evidence gathered.
+4. If making changes, explain what you changed and why.`;
 
 export class Orchestrator {
     private apiClient: APIClient;
