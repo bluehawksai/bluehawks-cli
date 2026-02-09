@@ -49,6 +49,74 @@ export class APIClient {
     }
 
     /**
+     * Parse Qwen3 tool calls from text content
+     * Qwen3 uses <tool_call> JSON format when vLLM auto-tool-choice is disabled
+     */
+    private parseQwen3ToolCalls(content: string): ToolCall[] {
+        const toolCalls: ToolCall[] = [];
+
+        // Pattern 1: <tool_call> JSON </tool_call>
+        const toolCallRegex = /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/g;
+        let match;
+        let callIndex = 0;
+
+        while ((match = toolCallRegex.exec(content)) !== null) {
+            try {
+                const jsonStr = match[1].trim();
+                const parsed = JSON.parse(jsonStr);
+
+                // Handle both {name, arguments} and {name, parameters} formats
+                const name = parsed.name || parsed.function;
+                const args = parsed.arguments || parsed.parameters || {};
+
+                if (name) {
+                    toolCalls.push({
+                        id: `call_${Date.now()}_${callIndex++}`,
+                        type: 'function',
+                        function: {
+                            name,
+                            arguments: typeof args === 'string' ? args : JSON.stringify(args),
+                        },
+                    });
+                }
+            } catch {
+                // Skip invalid JSON
+            }
+        }
+
+        // Pattern 2: Direct JSON array of tool calls
+        if (toolCalls.length === 0) {
+            const jsonArrayMatch = content.match(/\[\s*\{[\s\S]*?"name"[\s\S]*?\}\s*\]/g);
+            if (jsonArrayMatch) {
+                try {
+                    const parsed = JSON.parse(jsonArrayMatch[0]);
+                    if (Array.isArray(parsed)) {
+                        for (const item of parsed) {
+                            const name = item.name || item.function;
+                            const args = item.arguments || item.parameters || {};
+                            if (name) {
+                                toolCalls.push({
+                                    id: `call_${Date.now()}_${callIndex++}`,
+                                    type: 'function',
+                                    function: {
+                                        name,
+                                        arguments: typeof args === 'string' ? args : JSON.stringify(args),
+                                    },
+                                });
+                            }
+                        }
+                    }
+                } catch {
+                    // Not valid JSON array
+                }
+            }
+        }
+
+        return toolCalls;
+    }
+
+
+    /**
      * Create embeddings for the given input
      */
     async createEmbeddings(
@@ -98,6 +166,20 @@ export class APIClient {
         }
 
         const response = await this.makeRequest<ChatCompletionResponse>('/chat/completions', request);
+
+        // If vLLM didn't parse tool calls, try parsing from content (Qwen3 native format)
+        const message = response.choices[0]?.message;
+        if (message && (!message.tool_calls || message.tool_calls.length === 0)) {
+            const content = typeof message.content === 'string' ? message.content : '';
+            if (content.includes('<tool_call>') || content.includes('"name"')) {
+                const parsedCalls = this.parseQwen3ToolCalls(content);
+                if (parsedCalls.length > 0) {
+                    message.tool_calls = parsedCalls;
+                    // Remove tool call markup from content
+                    message.content = content.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim();
+                }
+            }
+        }
 
         return response;
     }
