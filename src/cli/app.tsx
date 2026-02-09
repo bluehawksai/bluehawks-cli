@@ -164,16 +164,17 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
 
         // Cleanup: trigger Stop hook and auto-save session on exit
         return () => {
-            const cleanup = async () => {
-                // Get stats first
+            // CRITICAL: Call onExit SYNCHRONOUSLY before async operations
+            // This ensures stats are captured before the process exits
+            if (!exitCalledRef.current && onExit) {
+                exitCalledRef.current = true;
                 const stats = sessionManager.getStats();
+                onExit(stats, sessionManager.getSessionId());
+            }
 
-                // Trigger exit callback if not already called
-                if (!exitCalledRef.current && onExit) {
-                    exitCalledRef.current = true;
-                    onExit(stats, sessionManager.getSessionId());
-                }
-
+            // Async cleanup for hooks and session save (non-critical)
+            const cleanup = async () => {
+                const stats = sessionManager.getStats();
                 const stopContext: StopInput = {
                     sessionId: sessionManager.getSessionId(),
                     projectPath: process.cwd(),
