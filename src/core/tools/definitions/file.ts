@@ -39,9 +39,13 @@ const readFileTool: ToolHandler = {
         },
     },
     async execute(args) {
-        const filePath = args.path as string;
+        const filePath = (args.path || args.file) as string;
         const startLine = args.start_line as number | undefined;
         const endLine = args.end_line as number | undefined;
+
+        if (!filePath) {
+            throw new Error('Missing required argument: path');
+        }
 
         const absolutePath = path.resolve(process.cwd(), filePath);
 
@@ -99,8 +103,12 @@ const writeFileTool: ToolHandler = {
         },
     },
     async execute(args) {
-        const filePath = args.path as string;
+        const filePath = (args.path || args.file) as string;
         const content = args.content as string;
+
+        if (!filePath) {
+            throw new Error('Missing required argument: path');
+        }
 
         const absolutePath = path.resolve(process.cwd(), filePath);
 
@@ -145,9 +153,13 @@ const editFileTool: ToolHandler = {
         },
     },
     async execute(args) {
-        const filePath = args.path as string;
+        const filePath = (args.path || args.file) as string;
         const oldContent = args.old_content as string;
         const newContent = args.new_content as string;
+
+        if (!filePath) {
+            throw new Error('Missing required argument: path');
+        }
 
         const absolutePath = path.resolve(process.cwd(), filePath);
 
@@ -199,9 +211,13 @@ const listDirTool: ToolHandler = {
         },
     },
     async execute(args) {
-        const dirPath = args.path as string;
+        const dirPath = (args.path || args.file) as string;
         const recursive = (args.recursive as boolean) ?? false;
         const maxDepth = (args.max_depth as number) ?? 3;
+
+        if (!dirPath) {
+            throw new Error('Missing required argument: path');
+        }
 
         const absolutePath = path.resolve(process.cwd(), dirPath);
 
@@ -255,7 +271,12 @@ const createDirTool: ToolHandler = {
         },
     },
     async execute(args) {
-        const dirPath = args.path as string;
+        const dirPath = (args.path || args.file) as string;
+
+        if (!dirPath) {
+            throw new Error('Missing required argument: path');
+        }
+
         const absolutePath = path.resolve(process.cwd(), dirPath);
 
         await fs.mkdir(absolutePath, { recursive: true });
@@ -290,8 +311,12 @@ const deleteFileTool: ToolHandler = {
         },
     },
     async execute(args) {
-        const filePath = args.path as string;
+        const filePath = (args.path || args.file) as string;
         const recursive = (args.recursive as boolean) ?? false;
+
+        if (!filePath) {
+            throw new Error('Missing required argument: path');
+        }
 
         const absolutePath = path.resolve(process.cwd(), filePath);
 
