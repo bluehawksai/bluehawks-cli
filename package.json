@@ -1,6 +1,6 @@
 {
   "name": "@bluehawks/cli",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "description": "A production-ready multi-agent AI CLI assistant",
   "type": "module",
   "main": "dist/index.js",
