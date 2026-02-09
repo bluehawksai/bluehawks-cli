@@ -17,6 +17,10 @@ export interface Session {
         model: string;
         tokensUsed: number;
         toolsUsed: string[];
+        successfulToolCalls: number;
+        failedToolCalls: number;
+        apiTime: number;
+        toolTime: number;
     };
 }
 
@@ -27,6 +31,10 @@ export interface SessionStats {
     toolMessages: number;
     tokensUsed: number;
     toolsUsed: string[];
+    successfulToolCalls: number;
+    failedToolCalls: number;
+    apiTime: number;
+    toolTime: number;
     duration: number;
 }
 
@@ -45,6 +53,10 @@ export class SessionManager {
                 model,
                 tokensUsed: 0,
                 toolsUsed: [],
+                successfulToolCalls: 0,
+                failedToolCalls: 0,
+                apiTime: 0,
+                toolTime: 0,
             },
         };
     }
@@ -78,6 +90,22 @@ export class SessionManager {
         this.session.metadata.tokensUsed += tokens;
     }
 
+    addApiTime(ms: number): void {
+        this.session.metadata.apiTime += ms;
+    }
+
+    addToolTime(ms: number): void {
+        this.session.metadata.toolTime += ms;
+    }
+
+    recordToolCall(success: boolean): void {
+        if (success) {
+            this.session.metadata.successfulToolCalls++;
+        } else {
+            this.session.metadata.failedToolCalls++;
+        }
+    }
+
     getMessages(): Message[] {
         return [...this.session.messages];
     }
@@ -93,6 +121,10 @@ export class SessionManager {
             toolMessages: messages.filter((m) => m.role === 'tool').length,
             tokensUsed: this.session.metadata.tokensUsed,
             toolsUsed: [...this.session.metadata.toolsUsed],
+            successfulToolCalls: this.session.metadata.successfulToolCalls,
+            failedToolCalls: this.session.metadata.failedToolCalls,
+            apiTime: this.session.metadata.apiTime,
+            toolTime: this.session.metadata.toolTime,
             duration,
         };
     }

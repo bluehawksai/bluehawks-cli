@@ -12,6 +12,8 @@ import { CLI_NAME, CLI_VERSION, CLI_DESCRIPTION, API_BASE_URL, DEFAULT_MODEL } f
 import { APIClient } from './core/api/client.js';
 import { Orchestrator } from './core/agents/orchestrator.js';
 import { ToolExecutor, registerAllTools, toolRegistry } from './core/tools/index.js';
+import { type SessionStats } from './core/session/manager.js';
+import chalk from 'chalk';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -153,6 +155,56 @@ async function runHeadless(prompt: string, options: HeadlessOptions) {
     }
 }
 
+function printSummary(stats: SessionStats, sessionId: string) {
+    const totalTools = stats.successfulToolCalls + stats.failedToolCalls;
+    const successRate = totalTools > 0
+        ? ((stats.successfulToolCalls / totalTools) * 100).toFixed(1)
+        : '0.0';
+
+    const formatTime = (ms: number) => {
+        if (ms < 1000) return `${ms}ms`;
+        return `${(ms / 1000).toFixed(1)}s`;
+    };
+
+    const wallTime = formatTime(stats.duration);
+    const apiTime = formatTime(stats.apiTime);
+    const toolTime = formatTime(stats.toolTime);
+    const activeTime = formatTime(stats.apiTime + stats.toolTime);
+
+    const apiPct = stats.duration > 0 ? ((stats.apiTime / stats.duration) * 100).toFixed(1) : '0.0';
+    const toolPct = stats.duration > 0 ? ((stats.toolTime / stats.duration) * 100).toFixed(1) : '0.0';
+
+    const width = 76;
+    const drawLine = () => console.log(chalk.gray('  ╭' + '─'.repeat(width) + '╮'));
+    const drawBottom = () => console.log(chalk.gray('  ╰' + '─'.repeat(width) + '╯'));
+    const drawRow = (content: string) => {
+        const plainLength = stripAnsi(content).length;
+        const padding = width - plainLength - 4;
+        console.log(chalk.gray('  │  ') + content + ' '.repeat(Math.max(0, padding)) + chalk.gray('  │'));
+    };
+
+    console.log();
+    drawLine();
+    drawRow(chalk.magenta('Agent powering down. Goodbye!'));
+    drawRow('');
+    drawRow(chalk.bold('Interaction Summary'));
+    drawRow(`${chalk.gray('Session ID:')}       ${chalk.white(sessionId)}`);
+    drawRow(`${chalk.gray('Tool Calls:')}       ${chalk.white(totalTools)} ( ${chalk.green('✓ ' + stats.successfulToolCalls)} x ${chalk.red('x ' + stats.failedToolCalls)} )`);
+    drawRow(`${chalk.gray('Success Rate:')}     ${chalk.white(successRate + '%')}`);
+    drawRow('');
+    drawRow(chalk.bold('Performance'));
+    drawRow(`${chalk.gray('Wall Time:')}        ${chalk.white(wallTime)}`);
+    drawRow(`${chalk.gray('Agent Active:')}     ${chalk.white(activeTime)}`);
+    drawRow(`  ${chalk.gray('» API Time:')}      ${chalk.white(apiTime.padEnd(8))} ${chalk.gray('(' + apiPct + '%)')}`);
+    drawRow(`  ${chalk.gray('» Tool Time:')}     ${chalk.white(toolTime.padEnd(8))} ${chalk.gray('(' + toolPct + '%)')}`);
+    drawBottom();
+    console.log();
+}
+
+function stripAnsi(str: string) {
+    return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+}
+
 // Configure CLI
 program
     .name(CLI_NAME)
@@ -192,18 +244,25 @@ program
 
 
         // Interactive mode
-        console.log(`\n🦅 ${CLI_NAME} v${CLI_VERSION}`);
-        console.log(`   API: ${API_BASE_URL}`);
-        console.log(`   Model: ${DEFAULT_MODEL}\n`);
+        let finalStats: SessionStats | null = null;
+        let finalSessionId: string | null = null;
 
         const { waitUntilExit } = render(
             React.createElement(App, {
                 apiKey: options.apiKey,
                 yoloMode: options.yolo,
+                onExit: (stats: SessionStats, sid: string) => {
+                    finalStats = stats;
+                    finalSessionId = sid;
+                },
             })
         );
 
         await waitUntilExit();
+
+        if (finalStats && finalSessionId) {
+            printSummary(finalStats, finalSessionId);
+        }
     });
 
 // Config command (show only)

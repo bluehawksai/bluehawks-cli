@@ -64,18 +64,44 @@ export class MemoryManager {
 
         const allMemories = await memoryStorage.getAll();
 
-        // Calculate similarity for each memory
-        const results: SearchResult[] = allMemories
+        // Stage 1: Vector Search (Fetch 50 candidates)
+        const candidates = allMemories
             .filter(m => m.embedding && m.embedding.length > 0)
             .map(memory => {
                 const similarity = this.cosineSimilarity(queryEmbedding, memory.embedding!);
                 return { ...memory, similarity };
             })
             .filter(r => r.similarity >= minSimilarity)
-            .sort((a, b) => b.similarity - a.similarity) // Descending
-            .slice(0, limit);
+            .sort((a, b) => b.similarity - a.similarity)
+            .slice(0, 50); // increased limit for reranking
 
-        return results;
+        if (candidates.length === 0) return [];
+
+        // Stage 2: Reranking
+        try {
+            // Rerank candidates
+            const rerankResponse = await apiClient.rerank({
+                query,
+                documents: candidates.map(c => c.content),
+                top_n: limit
+            });
+
+            // Map reranked results back to memory objects
+            const rerankedResults = rerankResponse.results.map(result => {
+                const candidate = candidates[result.index];
+                return {
+                    ...candidate,
+                    similarity: result.score // Update similarity with reranker score
+                };
+            });
+
+            return rerankedResults;
+
+        } catch (error) {
+            console.warn('Reranking failed, falling back to vector similarity:', error);
+            // Fallback: return top K from vector search
+            return candidates.slice(0, limit);
+        }
     }
 
     /**

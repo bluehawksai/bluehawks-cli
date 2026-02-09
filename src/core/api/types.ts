@@ -159,6 +159,29 @@ export interface EmbeddingObject {
     embedding: number[];
 }
 
+// Rerank Types
+export interface RerankRequest {
+    model?: string;
+    query: string;
+    documents: string[];
+    top_n?: number;
+}
+
+export interface RerankResult {
+    index: number;
+    score: number;
+    document: string;
+}
+
+export interface RerankResponse {
+    model: string;
+    results: RerankResult[];
+    usage?: {
+        total_tokens: number;
+        prompt_tokens?: number;
+    };
+}
+
 // API Error
 export class APIError extends Error {
     constructor(

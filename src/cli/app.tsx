@@ -14,12 +14,86 @@ import { commandRegistry, type CommandContext } from './commands/index.js';
 import { CLI_NAME, CLI_VERSION, COLORS } from '../config/constants.js';
 import { hooksManager } from '../core/hooks/index.js';
 import type { SessionStartInput, StopInput } from '../core/hooks/types.js';
+import * as path from 'path';
+import * as os from 'os';
+
+// UI Components
+const Branding = () => (
+    <Box flexDirection="column" marginY={1}>
+        <Text color="#3B82F6">{"██████╗ ██╗     ██╗   ██╗███████╗██╗  ██╗ █████╗ ██╗    ██╗██╗  ██╗███████╗"}</Text>
+        <Text color="#6366F1">{"██╔══██╗██║     ██║   ██║██╔════╝██║  ██║██╔══██╗██║    ██║██║ ██╔╝██╔════╝"}</Text>
+        <Text color="#8B5CF6">{"██████╔╝██║     ██║   ██║█████╗  ███████║███████║██║ █╗ ██║█████╔╝ ███████╗"}</Text>
+        <Text color="#A855F7">{"██╔══██╗██║     ██║   ██║██╔══╝  ██╔══██║██╔══██║██║███╗██║██╔═██╗ ╚════██║"}</Text>
+        <Text color="#D946EF">{"██████╔╝███████╗╚██████╔╝███████╗██║  ██║██║  ██║╚███╔███╔╝██║  ██╗███████║"}</Text>
+        <Text color="#EC4899">{"╚═════╝ ╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝"}</Text>
+    </Box>
+);
+
+const HeaderBox: React.FC<{ version: string; model: string; projectPath: string }> = ({ version, model, projectPath }) => {
+    const relativePath = projectPath.startsWith(os.homedir())
+        ? '~/' + path.relative(os.homedir(), projectPath)
+        : projectPath;
+
+    return (
+        <Box borderStyle="round" borderColor="#3B82F6" paddingX={2} paddingY={0} width={80} marginBottom={1}>
+            <Box flexDirection="column">
+                <Box>
+                    <Text bold color="#3B82F6">{">_ "}{CLI_NAME} </Text>
+                    <Text color="gray">(v{version})</Text>
+                </Box>
+                <Box marginTop={0}>
+                    <Text color="gray">Model: </Text>
+                    <Text color="white">{model}</Text>
+                </Box>
+                <Box>
+                    <Text color="gray">Path:  </Text>
+                    <Text color="white">{relativePath}</Text>
+                </Box>
+            </Box>
+        </Box>
+    );
+};
+
+const Tips = () => {
+    const tipsList = [
+        "Start a fresh idea with /clear or /new; the previous session stays available in history.",
+        "Use /yolo to auto-approve all tool executions for maximum speed.",
+        "Need help? Type /help to see all available commands and shortcuts.",
+        "Bluehawks can read your codebase, run tests, and even commit changes.",
+        "Working on a specific repository? Bluehawks understands your local context automatically."
+    ];
+    const [tip] = useState(() => tipsList[Math.floor(Math.random() * tipsList.length)]);
+
+    return (
+        <Box marginTop={1} marginBottom={1}>
+            <Text color="gray">Tips: {tip}</Text>
+        </Box>
+    );
+};
+
+const StatusBar: React.FC<{ isYoloMode: boolean }> = ({ isYoloMode }) => (
+    <Box marginTop={1} paddingX={1} borderStyle="single" borderTop={true} borderBottom={false} borderLeft={false} borderRight={false} borderColor="gray">
+        <Box flexGrow={1}>
+            {/* Usage tips simplified as they are now at top when empty */}
+            <Text color="gray">Type </Text>
+            <Text color="cyan" bold>/help</Text>
+            <Text color="gray"> for commands. </Text>
+        </Box>
+        {isYoloMode && (
+            <Box>
+                <Text color="#F59E0B" bold>⚡ YOLO MODE ACTIVE </Text>
+            </Box>
+        )}
+    </Box>
+);
 
 
 interface AppProps {
     initialPrompt?: string;
     apiKey?: string;
     yoloMode?: boolean;
+    onStatusUpdate?: (stats: any) => void;
+    onExit?: (stats: any, sid: string) => void;
 }
 
 interface MessageDisplay {
@@ -27,7 +101,7 @@ interface MessageDisplay {
     content: string;
 }
 
-export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = false }) => {
+export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = false, onExit }) => {
     const { exit } = useApp();
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<MessageDisplay[]>([]);
@@ -88,20 +162,23 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
         // Cleanup: trigger Stop hook and auto-save session on exit
         return () => {
             const cleanup = async () => {
+                const stats = sessionManager.getStats();
+                if (onExit) onExit(stats, sessionManager.getSessionId());
+
                 const stopContext: StopInput = {
                     sessionId: sessionManager.getSessionId(),
                     projectPath: process.cwd(),
                     model: apiClient.currentModel,
                     timestamp: new Date().toISOString(),
                     reason: 'completed',
-                    messageCount: sessionManager.getStats().messageCount,
+                    messageCount: stats.messageCount,
                 };
                 await hooksManager.execute('Stop', stopContext);
                 await sessionManager.save();
             };
             cleanup().catch(console.error);
         };
-    }, [toolExecutor, isYoloMode, orchestrator, sessionManager, apiClient]);
+    }, [toolExecutor, isYoloMode, orchestrator, sessionManager, apiClient, onExit]);
 
 
     // Handle initial prompt
@@ -191,6 +268,12 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                 sessionManager.addMessage({ role: 'user', content: trimmed });
                 sessionManager.addMessage({ role: 'assistant', content: response.content });
                 response.toolsUsed.forEach((tool) => sessionManager.addToolUsed(tool));
+
+                // Record metrics
+                sessionManager.addApiTime(response.apiTime);
+                sessionManager.addToolTime(response.toolTime);
+                for (let i = 0; i < response.successfulToolCalls; i++) sessionManager.recordToolCall(true);
+                for (let i = 0; i < response.failedToolCalls; i++) sessionManager.recordToolCall(false);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 setMessages((prev) => [...prev, { role: 'error', content: `Error: ${errorMessage}` }]);
@@ -237,43 +320,54 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
     };
 
     return (
-        <Box flexDirection="column" padding={1}>
-            {/* Header */}
-            <Box marginBottom={1}>
-                <Text bold color={COLORS.primary}>
-                    🦅 {CLI_NAME} v{CLI_VERSION}
-                </Text>
-                <Text color={COLORS.muted}> | </Text>
-                <Text color={COLORS.muted}>Type /help for commands</Text>
-                {isYoloMode && (
-                    <>
-                        <Text color={COLORS.muted}> | </Text>
-                        <Text color={COLORS.warning}>⚡ YOLO</Text>
-                    </>
-                )}
+        <Box flexDirection="column" paddingX={2} paddingY={1}>
+            {/* Branding & Header */}
+            <Box flexDirection="row" alignItems="center" marginBottom={1}>
+                <Branding />
+                <Box marginLeft={4}>
+                    <HeaderBox
+                        version={CLI_VERSION}
+                        model={apiClient.currentModel}
+                        projectPath={process.cwd()}
+                    />
+                </Box>
             </Box>
 
+            {/* Tips only shown on start */}
+            {messages.length === 0 && <Tips />}
+
             {/* Messages */}
-            <Box flexDirection="column" marginBottom={1}>
-                {messages.slice(-20).map((msg, i) => (
-                    <Box key={i} marginBottom={1}>
-                        <Text color={getRoleColor(msg.role)}>
-                            {msg.role === 'user' ? '› ' : msg.role === 'assistant' ? '🦅 ' : ''}
-                            {msg.content}
-                        </Text>
+            <Box flexDirection="column" flexGrow={1} marginBottom={1}>
+                {messages.slice(-30).map((msg, i) => (
+                    <Box key={i} marginBottom={1} flexDirection="column">
+                        <Box>
+                            <Text bold color={getRoleColor(msg.role)}>
+                                {msg.role === 'user' ? '👤 YOU ' : msg.role === 'assistant' ? '🦅 BLUEHAWKS ' : msg.role === 'tool' ? '🔧 TOOL ' : 'ℹ️ SYSTEM '}
+                            </Text>
+                        </Box>
+                        <Box marginLeft={2}>
+                            <Text color="white">
+                                {msg.content}
+                            </Text>
+                        </Box>
                     </Box>
                 ))}
 
                 {/* Streaming content */}
                 {streamingContent && (
-                    <Box marginBottom={1}>
-                        <Text color={COLORS.success}>🦅 {streamingContent}</Text>
+                    <Box marginBottom={1} flexDirection="column">
+                        <Box>
+                            <Text bold color={COLORS.success}>🦅 BLUEHAWKS </Text>
+                        </Box>
+                        <Box marginLeft={2}>
+                            <Text color="white">{streamingContent}</Text>
+                        </Box>
                     </Box>
                 )}
 
                 {/* Current tool */}
                 {currentTool && (
-                    <Box>
+                    <Box marginLeft={2}>
                         <Spinner type="dots" />
                         <Text color={COLORS.info}> Running {currentTool}...</Text>
                     </Box>
@@ -281,37 +375,47 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
 
                 {/* Approval prompt */}
                 {pendingApproval && (
-                    <Box flexDirection="column" borderStyle="round" borderColor="yellow" padding={1}>
-                        <Text color={COLORS.warning}>
-                            ⚠️ Tool requires approval: {pendingApproval.toolName}
+                    <Box flexDirection="column" borderStyle="round" borderColor="yellow" padding={1} marginY={1}>
+                        <Text color={COLORS.warning} bold>
+                            ⚠️ ACTION REQUIRED: Tool Approval
                         </Text>
-                        <Text color={COLORS.muted}>
-                            Args: {JSON.stringify(pendingApproval.args, null, 2).substring(0, 200)}
-                        </Text>
-                        <Text>
-                            Press <Text color="green">Y</Text> to approve, <Text color="red">N</Text> to deny
-                        </Text>
+                        <Box marginY={1} paddingX={1} borderStyle="single" borderColor="gray">
+                            <Text color="white" bold>{pendingApproval.toolName}</Text>
+                            <Text color="gray">
+                                {"\n"}Args: {JSON.stringify(pendingApproval.args, null, 2).substring(0, 500)}
+                            </Text>
+                        </Box>
+                        <Box>
+                            <Text>Press </Text>
+                            <Text color="green" bold>Y</Text>
+                            <Text> to approve, </Text>
+                            <Text color="red" bold>N</Text>
+                            <Text> to deny</Text>
+                        </Box>
                     </Box>
                 )}
             </Box>
 
-            {/* Input */}
+            {/* Input Area */}
             {!pendingApproval && (
-                <Box>
-                    <Text color={COLORS.primary}>› </Text>
-                    {isProcessing ? (
-                        <Box>
-                            <Spinner type="dots" />
-                            <Text color={COLORS.muted}> Thinking...</Text>
-                        </Box>
-                    ) : (
-                        <TextInput
-                            value={input}
-                            onChange={setInput}
-                            onSubmit={handleSubmit}
-                            placeholder="Ask me anything..."
-                        />
-                    )}
+                <Box flexDirection="column">
+                    <Box borderStyle="single" borderTop={true} borderBottom={false} borderLeft={false} borderRight={false} borderColor="gray" paddingTop={1}>
+                        <Text color={COLORS.primary} bold>❯ </Text>
+                        {isProcessing ? (
+                            <Box>
+                                <Spinner type="simpleDotsScrolling" />
+                                <Text color={COLORS.muted}> Agent is thinking...</Text>
+                            </Box>
+                        ) : (
+                            <TextInput
+                                value={input}
+                                onChange={setInput}
+                                onSubmit={handleSubmit}
+                                placeholder="What's on your mind?"
+                            />
+                        )}
+                    </Box>
+                    <StatusBar isYoloMode={isYoloMode} />
                 </Box>
             )}
         </Box>

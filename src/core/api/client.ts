@@ -11,6 +11,8 @@ import {
     DEFAULT_TIMEOUT_MS,
     MAX_RETRIES,
     RETRY_DELAY_MS,
+    DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_RERANK_MODEL,
 } from '../../config/constants.js';
 import {
     type APIClientOptions,
@@ -24,6 +26,8 @@ import {
     type StreamDelta,
     type EmbeddingRequest,
     type EmbeddingResponse,
+    type RerankRequest,
+    type RerankResponse,
     APIError,
 } from './types.js';
 
@@ -52,12 +56,25 @@ export class APIClient {
         model?: string
     ): Promise<EmbeddingResponse> {
         const body: EmbeddingRequest = {
-            model: model || 'text-embedding-3-small',
+            model: model || DEFAULT_EMBEDDING_MODEL,
             input,
         };
 
         return this.makeRequest<EmbeddingResponse>('/embeddings', body);
     }
+
+    /**
+     * Rerank documents based on query relevance
+     */
+    async rerank(request: RerankRequest): Promise<RerankResponse> {
+        const body: RerankRequest = {
+            model: DEFAULT_RERANK_MODEL,
+            ...request,
+        };
+        return this.makeRequest<RerankResponse>('/rerank', body);
+    }
+
+
 
     /**
      * Create a chat completion (non-streaming)
@@ -241,8 +258,9 @@ export class APIClient {
             'Content-Type': 'application/json',
         };
 
-        if (this.apiKey) {
-            headers['Authorization'] = `Bearer ${this.apiKey}`;
+        const key = this.apiKey || process.env.BLUEHAWKS_API_KEY;
+        if (key) {
+            headers['Authorization'] = `Bearer ${key}`;
         }
 
         return headers;

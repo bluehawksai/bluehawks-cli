@@ -21,6 +21,10 @@ export interface AgentResponse {
     content: string;
     toolsUsed: string[];
     iterations: number;
+    apiTime: number;
+    toolTime: number;
+    successfulToolCalls: number;
+    failedToolCalls: number;
 }
 
 export class Agent {
@@ -67,16 +71,22 @@ export class Agent {
         const toolsUsed: string[] = [];
         let iterations = 0;
         let finalContent = '';
+        let apiTime = 0;
+        let toolTime = 0;
+        let successfulToolCalls = 0;
+        let failedToolCalls = 0;
 
         while (iterations < this.maxIterations) {
             iterations++;
 
             // Use non-streaming with tools for agent loop (vLLM doesn't support streaming + tool_choice)
+            const apiStart = Date.now();
             const response = await this.apiClient.createChatCompletion(
                 this.messages,
                 this.tools,
                 'auto'
             );
+            apiTime += Date.now() - apiStart;
 
             const choice = response.choices[0];
             const message = choice.message;
@@ -150,6 +160,8 @@ export class Agent {
                 try {
                     const result = await this.toolExecutor.executeToolCall(toolCall);
                     const duration = Date.now() - startTime;
+                    toolTime += duration;
+                    successfulToolCalls++;
                     toolResults.push(result);
 
                     // Execute PostToolUse hooks
@@ -177,6 +189,7 @@ export class Agent {
                         tool_call_id: toolCall.id,
                         content: `Error: ${error instanceof Error ? error.message : String(error)}`,
                     });
+                    failedToolCalls++;
                     onToolEnd?.(toolName, 'Error');
                 }
             }
@@ -196,6 +209,10 @@ export class Agent {
             content: finalContent,
             toolsUsed,
             iterations,
+            apiTime,
+            toolTime,
+            successfulToolCalls,
+            failedToolCalls,
         };
     }
 
