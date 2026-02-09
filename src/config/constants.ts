@@ -4,13 +4,13 @@
 
 // API Configuration
 export const API_BASE_URL = 'https://api.bluehawks.ai/v1';
-export const DEFAULT_MODEL = 'Qwen/Qwen3-0.6B';
+export const DEFAULT_MODEL = 'Qwen/Qwen3-8B';  // 8B model supports proper function calling
 export const DEFAULT_EMBEDDING_MODEL = 'Qwen/Qwen3-Embedding-0.6B';
 export const DEFAULT_RERANK_MODEL = 'Qwen/Qwen3-Reranker-0.6B';
 
 // CLI Metadata
 export const CLI_NAME = 'bluehawks';
-export const CLI_VERSION = '1.0.8';
+export const CLI_VERSION = '1.0.9';
 export const CLI_DESCRIPTION = 'A production-ready multi-agent AI CLI assistant';
 
 // Configuration Paths

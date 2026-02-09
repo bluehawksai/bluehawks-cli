@@ -103,6 +103,7 @@ interface MessageDisplay {
 
 export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = false, onExit }) => {
     const { exit } = useApp();
+    const exitCalledRef = React.useRef(false);
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<MessageDisplay[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -162,8 +163,14 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
         // Cleanup: trigger Stop hook and auto-save session on exit
         return () => {
             const cleanup = async () => {
+                // Get stats first
                 const stats = sessionManager.getStats();
-                if (onExit) onExit(stats, sessionManager.getSessionId());
+
+                // Trigger exit callback if not already called
+                if (!exitCalledRef.current && onExit) {
+                    exitCalledRef.current = true;
+                    onExit(stats, sessionManager.getSessionId());
+                }
 
                 const stopContext: StopInput = {
                     sessionId: sessionManager.getSessionId(),
@@ -199,7 +206,15 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     sessionManager,
                     orchestrator,
                     toolRegistry,
-                    onExit: () => exit(),
+                    onExit: () => {
+                        // Get stats before exit and call callback
+                        if (!exitCalledRef.current && onExit) {
+                            exitCalledRef.current = true;
+                            const stats = sessionManager.getStats();
+                            onExit(stats, sessionManager.getSessionId());
+                        }
+                        exit();
+                    },
                 };
 
                 const result = await commandRegistry.execute(trimmed, context);
