@@ -56,6 +56,60 @@ bluehawks
 bluehawks -p "explain this codebase" --json
 ```
 
+## 🧠 Model Configuration
+
+Bluehawks supports any OpenAI-compatible API endpoint. You can configure the model in several ways:
+
+### Environment Variables
+
+Set these in `~/.bluehawks/.env` or your shell:
+
+```env
+BLUEHAWKS_API_KEY=your-api-key
+BLUEHAWKS_API_URL=https://api.bluehawks.ai/v1
+BLUEHAWKS_MODEL=Qwen/Qwen3-8B
+```
+
+### CLI Flag
+
+Override the model for a single session:
+```bash
+bluehawks --model Qwen/Qwen3-32B
+```
+
+### Recommended Models
+
+| Model | Best For | Notes |
+|-------|----------|-------|
+| `Qwen/Qwen3-0.6B` | Quick responses, simple tasks | Fastest, but limited tool calling |
+| `Qwen/Qwen3-8B` | **Recommended default** | Good balance of speed and capability |
+| `Qwen/Qwen3-32B` | Complex coding tasks | Best for large refactors, multi-file changes |
+| `Qwen/Qwen3-Coder-32B` | Code-specific tasks | Optimized for coding, uses vLLM auto-tool parser |
+
+### Using Custom/Local Models
+
+You can point Bluehawks to any OpenAI-compatible endpoint:
+
+```bash
+# Using Ollama locally
+export BLUEHAWKS_API_URL=http://localhost:11434/v1
+export BLUEHAWKS_MODEL=qwen3:8b
+export BLUEHAWKS_API_KEY=ollama  # Ollama doesn't need real key
+bluehawks
+
+# Using a custom vLLM server
+export BLUEHAWKS_API_URL=http://your-server:8000/v1
+export BLUEHAWKS_MODEL=Qwen/Qwen3-32B
+bluehawks
+```
+
+### Model-Specific Tips
+
+- **For Qwen3 models**: Use `Temperature=0.7`, `TopP=0.8` (Bluehawks uses these by default)
+- **For tool-heavy workflows**: Use 8B+ models for reliable function calling
+- **For thinking/reasoning**: Qwen3 supports `enable_thinking` mode—the CLI automatically strips `<think>` tags from output
+
+
 ## 💻 Usage
 
 ### Commands
