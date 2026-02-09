@@ -19,7 +19,7 @@ A powerful, production-ready **multi-agent AI CLI assistant** for terminal-based
 
 ## 📦 Installation
 
-### From npm (Coming Soon)
+### From npm
 ```bash
 npm install -g @bluehawks/cli
 ```
