@@ -9,6 +9,7 @@ import { Agent, type AgentResponse } from './agent.js';
 import { CONTEXT_FILE } from '../../config/constants.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { memoryManager } from '../memory/index.js'; // Corrected path
 
 export interface SubAgentConfig {
     name: string;
@@ -178,16 +179,26 @@ Before making any changes, first:
             onToolEnd?: (name: string, result: string) => void;
         }
     ): Promise<AgentResponse> {
+        // Retrieve relevant memories
+        const memories = await memoryManager.search(userMessage, 5);
+        let systemPrompt = this.buildSystemPrompt();
+
+        if (memories.length > 0) {
+            const memoryContext = memories
+                .map(m => `- [${m.type.toUpperCase()}] ${m.content}`)
+                .join('\n');
+            systemPrompt += `\n\n## Long-Term Memory (Relevant Context)\n${memoryContext}\n\nUse this information to guide your decisions and avoid past mistakes.`;
+        }
+
         const mainAgent = new Agent(
             {
                 name: 'main',
-                systemPrompt: this.buildSystemPrompt(),
+                systemPrompt,
                 maxIterations: this.maxTurns,
             },
             this.apiClient,
             this.toolExecutor
         );
-
 
         return mainAgent.run(
             userMessage,

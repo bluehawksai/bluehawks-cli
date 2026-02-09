@@ -136,6 +136,29 @@ export interface APIClientOptions {
 export type StreamCallback = (chunk: string) => void;
 export type ToolCallCallback = (toolCalls: ToolCall[]) => void;
 
+// Embedding Types
+export interface EmbeddingRequest {
+    model: string;
+    input: string | string[];
+    user?: string;
+}
+
+export interface EmbeddingResponse {
+    object: 'list';
+    data: EmbeddingObject[];
+    model: string;
+    usage: {
+        prompt_tokens: number;
+        total_tokens: number;
+    };
+}
+
+export interface EmbeddingObject {
+    object: 'embedding';
+    index: number;
+    embedding: number[];
+}
+
 // API Error
 export class APIError extends Error {
     constructor(

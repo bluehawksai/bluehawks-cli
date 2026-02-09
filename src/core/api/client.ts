@@ -22,6 +22,8 @@ import {
     type ToolDefinition,
     type ToolResult,
     type StreamDelta,
+    type EmbeddingRequest,
+    type EmbeddingResponse,
     APIError,
 } from './types.js';
 
@@ -40,6 +42,21 @@ export class APIClient {
         this.maxTokens = options.maxTokens || DEFAULT_MAX_TOKENS;
         this.temperature = options.temperature || DEFAULT_TEMPERATURE;
         this.timeout = options.timeout || DEFAULT_TIMEOUT_MS;
+    }
+
+    /**
+     * Create embeddings for the given input
+     */
+    async createEmbeddings(
+        input: string | string[],
+        model?: string
+    ): Promise<EmbeddingResponse> {
+        const body: EmbeddingRequest = {
+            model: model || 'text-embedding-3-small',
+            input,
+        };
+
+        return this.makeRequest<EmbeddingResponse>('/embeddings', body);
     }
 
     /**
