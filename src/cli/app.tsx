@@ -366,25 +366,29 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                         try {
                             const content = JSON.parse(msg.content);
                             if (content.type === 'tool_start') {
+                                // Smart JSON formatting: one line if short, indented if long
+                                const jsonStr = JSON.stringify(content.args);
+                                const displayArgs = jsonStr.length < 80 ? jsonStr : JSON.stringify(content.args, null, 2);
+
                                 return (
-                                    <Box key={i} flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={1} marginY={1}>
+                                    <Box key={i} flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={1} marginY={0} marginBottom={1} alignSelf="flex-start">
                                         <Box>
                                             <Text color="magenta" bold>⚡ TOOL CALL: </Text>
                                             <Text color="white" bold>{content.name}</Text>
                                         </Box>
-                                        <Box marginLeft={2}>
-                                            <Text color="gray">{JSON.stringify(content.args, null, 2)}</Text>
+                                        <Box marginLeft={1}>
+                                            <Text color="gray">{displayArgs}</Text>
                                         </Box>
                                     </Box>
                                 );
                             } else if (content.type === 'tool_end') {
                                 return (
-                                    <Box key={i} flexDirection="column" borderStyle="round" borderColor="green" paddingX={1} marginBottom={1}>
+                                    <Box key={i} flexDirection="column" borderStyle="round" borderColor="green" paddingX={1} marginBottom={1} alignSelf="flex-start">
                                         <Box>
                                             <Text color="green" bold>✅ TOOL RESULT: </Text>
                                             <Text color="white" bold>{content.name}</Text>
                                         </Box>
-                                        <Box marginLeft={2}>
+                                        <Box marginLeft={1}>
                                             <Text color="gray">{content.result ? content.result.substring(0, 200) + (content.result.length > 200 ? '...' : '') : 'Completed'}</Text>
                                         </Box>
                                     </Box>
