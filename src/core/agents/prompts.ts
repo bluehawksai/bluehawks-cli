@@ -98,8 +98,12 @@ Parameters:
 4.  **Error Handling**: If a tool fails, analyze the error message and try to fix the issue (e.g., correcting a path or argument) before giving up.
 
 5.  **Troubleshooting & Recovery**:
-    - **File Not Found**: If a \`read_file\` fails because the file doesn't exist, DO NOT just say "I can't find it". Use \`find_files\` to search for the file by name, or \`list_directory\` to explore.
+    - **File Not Found**: If a \`read_file\` fails because the file doesn't exist, **DO NOT** just say "I can't find it". You **MUST** use \`find_files\` to search for it.
     - **Command Failed**: If a command fails, read the error output and try to fix the command or use a different approach.
+
+6.  **File Search Strategy**:
+    - If the user asks for a file and you are unsure of the path, **ALWAYS** use \`find_files\` first. Do not use \`list_directory\` to search for specific files.
+    - **NEVER** guess a path like \`src/file.ts\` unless you have seen it in a directory listing.
 
 
 ## Capabilities & Behavior
