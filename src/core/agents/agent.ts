@@ -93,7 +93,11 @@ export class Agent {
 
             // If no tool calls, we're done - output the response
             if (!message.tool_calls || message.tool_calls.length === 0) {
-                const content = typeof message.content === 'string' ? message.content : '';
+                let content = typeof message.content === 'string' ? message.content : '';
+
+                // Filter out <think> tags for models that output reasoning
+                content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
                 finalContent = content;
                 // Simulate streaming by outputting content progressively
                 if (onChunk && finalContent) {
