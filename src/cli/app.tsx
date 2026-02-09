@@ -115,7 +115,6 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
         resolve: (approved: boolean) => void;
     } | null>(null);
     const [isYoloMode, setIsYoloMode] = useState(yoloMode);
-    const [toolArgs, setToolArgs] = useState<Record<string, unknown> | null>(null);
 
 
     // Initialize components
@@ -262,18 +261,22 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     },
                     onToolStart: (name, args?: Record<string, unknown>) => {
                         setCurrentTool(name);
-                        setToolArgs(args || null);
                         setMessages((prev) => [
                             ...prev,
-                            { role: 'tool', content: `🔧 Calling: ${name}${args ? ` (${Object.keys(args).join(', ')})` : ''}` },
+                            {
+                                role: 'tool',
+                                content: JSON.stringify({ type: 'tool_start', name, args })
+                            },
                         ]);
                     },
-                    onToolEnd: (name, _result) => {
+                    onToolEnd: (name, result) => {
                         setCurrentTool(null);
-                        setToolArgs(null);
                         setMessages((prev) => [
                             ...prev,
-                            { role: 'tool', content: `✅ ${name} completed` },
+                            {
+                                role: 'tool',
+                                content: JSON.stringify({ type: 'tool_end', name, result })
+                            },
                         ]);
                     },
                 });
@@ -357,20 +360,62 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
 
             {/* Messages */}
             <Box flexDirection="column" flexGrow={1} marginBottom={1}>
-                {messages.slice(-30).map((msg, i) => (
-                    <Box key={i} marginBottom={1} flexDirection="column">
-                        <Box>
-                            <Text bold color={getRoleColor(msg.role)}>
-                                {msg.role === 'user' ? '👤 YOU ' : msg.role === 'assistant' ? '🦅 BLUEHAWKS ' : msg.role === 'tool' ? '🔧 TOOL ' : 'ℹ️ SYSTEM '}
-                            </Text>
+                {messages.slice(-30).map((msg, i) => {
+                    // Custom rendering for Tool messages (Boxed UI)
+                    if (msg.role === 'tool') {
+                        try {
+                            const content = JSON.parse(msg.content);
+                            if (content.type === 'tool_start') {
+                                return (
+                                    <Box key={i} flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={1} marginY={1}>
+                                        <Box>
+                                            <Text color="magenta" bold>⚡ TOOL CALL: </Text>
+                                            <Text color="white" bold>{content.name}</Text>
+                                        </Box>
+                                        <Box marginLeft={2}>
+                                            <Text color="gray">{JSON.stringify(content.args, null, 2)}</Text>
+                                        </Box>
+                                    </Box>
+                                );
+                            } else if (content.type === 'tool_end') {
+                                return (
+                                    <Box key={i} flexDirection="column" borderStyle="round" borderColor="green" paddingX={1} marginBottom={1}>
+                                        <Box>
+                                            <Text color="green" bold>✅ TOOL RESULT: </Text>
+                                            <Text color="white" bold>{content.name}</Text>
+                                        </Box>
+                                        <Box marginLeft={2}>
+                                            <Text color="gray">{content.result ? content.result.substring(0, 200) + (content.result.length > 200 ? '...' : '') : 'Completed'}</Text>
+                                        </Box>
+                                    </Box>
+                                );
+                            }
+                        } catch {
+                            // Fallback for legacy plain text tool messages
+                            return (
+                                <Box key={i} marginBottom={1}>
+                                    <Text color="gray">🔧 {msg.content}</Text>
+                                </Box>
+                            );
+                        }
+                    }
+
+                    // Standard User/Assistant/System messages
+                    return (
+                        <Box key={i} marginBottom={1} flexDirection="column">
+                            <Box>
+                                <Text bold color={getRoleColor(msg.role)}>
+                                    {msg.role === 'user' ? '👤 YOU ' : msg.role === 'assistant' ? '🦅 BLUEHAWKS ' : 'ℹ️ SYSTEM '}
+                                </Text>
+                            </Box>
+                            <Box marginLeft={2}>
+                                <Text color="white">
+                                    {msg.content}
+                                </Text>
+                            </Box>
                         </Box>
-                        <Box marginLeft={2}>
-                            <Text color="white">
-                                {msg.content}
-                            </Text>
-                        </Box>
-                    </Box>
-                ))}
+                    );
+                })}
 
                 {/* Streaming content */}
                 {streamingContent && (
@@ -384,21 +429,14 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     </Box>
                 )}
 
-                {/* Current tool - Enhanced display */}
-                {currentTool && (
+                {/* Current tool - Only show if NO persistent start message was added yet (prevent partial dupes) */}
+                {currentTool && !messages.some(m => m.role === 'tool' && m.content.includes(currentTool) && m.content.includes('tool_start')) && (
                     <Box flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={2} paddingY={1} marginY={1}>
                         <Box>
                             <Spinner type="dots" />
                             <Text color="magenta" bold> ⚡ TOOL CALL: </Text>
                             <Text color="white" bold>{currentTool}</Text>
                         </Box>
-                        {toolArgs && (
-                            <Box marginTop={1} marginLeft={2}>
-                                <Text color="gray">
-                                    {JSON.stringify(toolArgs, null, 2).substring(0, 300)}
-                                </Text>
-                            </Box>
-                        )}
                     </Box>
                 )}
 
