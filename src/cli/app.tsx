@@ -374,26 +374,18 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     </Box>
                 )}
 
-                {/* Current tool - Minimal Spinner */}
-                {currentTool && (
-                    <Box flexDirection="row" marginY={0}>
-                        <Text color="magenta">  ├─ </Text>
-                        <Spinner type="dots" />
-                        <Text color="magenta"> Executing {currentTool}...</Text>
-                    </Box>
-                )}
-
-                {/* Approval prompt */}
+                {/* Approval prompt as a Status Message */}
                 {pendingApproval && (
-                    <Box flexDirection="column" borderStyle="single" borderColor="yellow" paddingX={1} marginTop={1}>
-                        <Text color={COLORS.warning} bold>Action Required: {pendingApproval.toolName}</Text>
-                        <Text color="white">Args: {JSON.stringify(pendingApproval.args).substring(0, 100)}...</Text>
-                        <Text color="gray">[Y]es / [N]o</Text>
+                    <Box flexDirection="row" marginTop={1} paddingX={0}>
+                        <Text color="yellow">? </Text>
+                        <Text color="white" bold>Waiting for user confirmation: </Text>
+                        <Text color="yellow">{pendingApproval.toolName}</Text>
+                        <Text color="gray"> [y/N]</Text>
                     </Box>
                 )}
             </Box>
 
-            {/* Input Area - Command Bar Style */}
+            {/* Input / Status Area */}
             {!pendingApproval && (
                 <Box flexDirection="column" marginTop={1}>
                     {/* Separator Line */}
@@ -402,7 +394,12 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                     <Box>
                         <Text color={COLORS.primary} bold>❯ </Text>
                         {isProcessing ? (
-                            <Text color={COLORS.muted}>Thinking...</Text>
+                            <Box>
+                                <Spinner type="dots" />
+                                <Text color={COLORS.muted}>
+                                    {currentTool ? ` Executing ${currentTool}...` : ' Thinking...'}
+                                </Text>
+                            </Box>
                         ) : (
                             <TextInput
                                 value={input}
