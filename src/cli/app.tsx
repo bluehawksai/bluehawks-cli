@@ -214,6 +214,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                         if (!exitCalledRef.current && onExit) {
                             exitCalledRef.current = true;
                             const stats = sessionManager.getStats();
+                            console.log('DEBUG: App.tsx onExit triggered', stats.messageCount);
                             onExit(stats, sessionManager.getSessionId());
                         }
                         exit();
