@@ -60,11 +60,13 @@ export class Agent {
         userMessage: string,
         onChunk?: (content: string) => void,
         onToolStart?: (name: string, args?: Record<string, unknown>) => void,
-        onToolEnd?: (name: string, result: string) => void
+        onToolEnd?: (name: string, result: string) => void,
+        history: Array<{ role: string; content: string }> = []
     ): Promise<AgentResponse> {
-        // Initialize with system message
+        // Initialize with system message, prior history, and current user message
         this.messages = [
             { role: 'system', content: this.systemPrompt },
+            ...history.map(m => ({ role: m.role as 'user' | 'assistant' | 'system' | 'tool', content: m.content })),
             { role: 'user', content: userMessage },
         ];
 

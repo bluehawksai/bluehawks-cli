@@ -61,6 +61,8 @@ export class Orchestrator {
     private contextContent: string = '';
     private rootStructure: string = '';
     private subAgents: Map<string, SubAgentConfig> = new Map();
+    private conversationHistory: Array<{ role: string; content: string }> = [];
+
 
     constructor(options: OrchestratorOptions) {
         this.apiClient = options.apiClient;
@@ -179,6 +181,9 @@ Before making any changes, first:
             onToolEnd?: (name: string, result: string) => void;
         }
     ): Promise<AgentResponse> {
+        // Add user message to conversation history
+        this.conversationHistory.push({ role: 'user', content: userMessage });
+
         // Retrieve relevant memories
         const memories = await memoryManager.search(userMessage, 5);
         let systemPrompt = this.buildSystemPrompt();
@@ -200,12 +205,22 @@ Before making any changes, first:
             this.toolExecutor
         );
 
-        return mainAgent.run(
+        // Pass conversation history (excluding current message which will be added by agent)
+        const priorHistory = this.conversationHistory.slice(0, -1);
+        const response = await mainAgent.run(
             userMessage,
             callbacks?.onChunk,
             callbacks?.onToolStart,
-            callbacks?.onToolEnd
+            callbacks?.onToolEnd,
+            priorHistory
         );
+
+        // Add assistant response to history
+        if (response.content) {
+            this.conversationHistory.push({ role: 'assistant', content: response.content });
+        }
+
+        return response;
     }
 
     async runSubAgent(
