@@ -197,6 +197,22 @@ function printSummary(stats: SessionStats, sessionId: string) {
     drawRow(`${chalk.gray('Agent Active:')}     ${chalk.white(activeTime)}`);
     drawRow(`  ${chalk.gray('» API Time:')}      ${chalk.white(apiTime.padEnd(8))} ${chalk.gray('(' + apiPct + '%)')}`);
     drawRow(`  ${chalk.gray('» Tool Time:')}     ${chalk.white(toolTime.padEnd(8))} ${chalk.gray('(' + toolPct + '%)')}`);
+
+    if (stats.modelUsage && Object.keys(stats.modelUsage).length > 0) {
+        drawRow('');
+        drawRow(chalk.bold('Model Usage'));
+        drawRow(chalk.gray('  Model                 Input   Cache  Output'));
+        drawRow(chalk.gray('  ─────────────────  ────────  ──────  ──────'));
+
+        for (const [model, usage] of Object.entries(stats.modelUsage)) {
+            const modelName = model.length > 17 ? model.substring(0, 16) + '…' : model.padEnd(17);
+            const input = usage.inputTokens.toLocaleString().padStart(8);
+            const cache = usage.cacheReadTokens.toLocaleString().padStart(6);
+            const output = usage.outputTokens.toLocaleString().padStart(6);
+            drawRow(`  ${chalk.cyan(modelName)}  ${chalk.white(input)}  ${chalk.white(cache)}  ${chalk.white(output)}`);
+        }
+    }
+
     drawBottom();
     console.log();
 }

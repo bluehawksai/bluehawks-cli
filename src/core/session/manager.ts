@@ -5,7 +5,7 @@
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type { Message } from '../api/types.js';
+import type { Message, Usage } from '../api/types.js';
 import { CONFIG_DIR_NAME, HISTORY_FILE, MAX_HISTORY_MESSAGES } from '../../config/constants.js';
 
 export interface Session {
@@ -21,6 +21,12 @@ export interface Session {
         failedToolCalls: number;
         apiTime: number;
         toolTime: number;
+        modelUsage: Record<string, {
+            inputTokens: number;
+            outputTokens: number;
+            cacheReadTokens: number;
+            totalTokens: number;
+        }>;
     };
 }
 
@@ -36,6 +42,12 @@ export interface SessionStats {
     apiTime: number;
     toolTime: number;
     duration: number;
+    modelUsage: Record<string, {
+        inputTokens: number;
+        outputTokens: number;
+        cacheReadTokens: number;
+        totalTokens: number;
+    }>;
 }
 
 export class SessionManager {
@@ -57,6 +69,7 @@ export class SessionManager {
                 failedToolCalls: 0,
                 apiTime: 0,
                 toolTime: 0,
+                modelUsage: {},
             },
         };
     }
@@ -98,6 +111,34 @@ export class SessionManager {
         this.session.metadata.toolTime += ms;
     }
 
+    addUsage(model: string, usage: Usage): void {
+        // Update total tokens
+        this.session.metadata.tokensUsed += usage.total_tokens || 0;
+
+        // Update per-model usage
+        if (!this.session.metadata.modelUsage) {
+            this.session.metadata.modelUsage = {};
+        }
+
+        if (!this.session.metadata.modelUsage[model]) {
+            this.session.metadata.modelUsage[model] = {
+                inputTokens: 0,
+                outputTokens: 0,
+                cacheReadTokens: 0,
+                totalTokens: 0,
+            };
+        }
+
+        const modelStats = this.session.metadata.modelUsage[model];
+        modelStats.inputTokens += usage.prompt_tokens || 0;
+        modelStats.outputTokens += usage.completion_tokens || 0;
+        modelStats.totalTokens += usage.total_tokens || 0;
+
+        if (usage.prompt_tokens_details?.cached_tokens) {
+            modelStats.cacheReadTokens += usage.prompt_tokens_details.cached_tokens;
+        }
+    }
+
     recordToolCall(success: boolean): void {
         if (success) {
             this.session.metadata.successfulToolCalls++;
@@ -125,6 +166,7 @@ export class SessionManager {
             failedToolCalls: this.session.metadata.failedToolCalls,
             apiTime: this.session.metadata.apiTime,
             toolTime: this.session.metadata.toolTime,
+            modelUsage: this.session.metadata.modelUsage || {},
             duration,
         };
     }

@@ -6,7 +6,7 @@
 import { APIClient } from '../api/client.js';
 import { toolRegistry } from '../tools/registry.js';
 import { ToolExecutor } from '../tools/executor.js';
-import type { Message, ToolResult, ToolDefinition } from '../api/types.js';
+import type { Message, ToolResult, ToolDefinition, Usage } from '../api/types.js';
 import { hooksManager } from '../hooks/index.js';
 import type { PreToolUseInput, PostToolUseInput, PostToolUseFailureInput } from '../hooks/types.js';
 
@@ -25,6 +25,7 @@ export interface AgentResponse {
     toolTime: number;
     successfulToolCalls: number;
     failedToolCalls: number;
+    usage: Usage;
 }
 
 export class Agent {
@@ -79,6 +80,13 @@ export class Agent {
         let toolTime = 0;
         let successfulToolCalls = 0;
         let failedToolCalls = 0;
+        const totalUsage: Usage = {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+            prompt_tokens_details: { cached_tokens: 0, audio_tokens: 0 },
+            completion_tokens_details: { reasoning_tokens: 0, audio_tokens: 0, accepted_prediction_tokens: 0, rejected_prediction_tokens: 0 }
+        };
 
         while (iterations < this.maxIterations) {
             iterations++;
@@ -91,6 +99,23 @@ export class Agent {
                 'auto'
             );
             apiTime += Date.now() - apiStart;
+
+            if (response.usage) {
+                totalUsage.prompt_tokens += response.usage.prompt_tokens || 0;
+                totalUsage.completion_tokens += response.usage.completion_tokens || 0;
+                totalUsage.total_tokens += response.usage.total_tokens || 0;
+
+                if (response.usage.prompt_tokens_details) {
+                    if (!totalUsage.prompt_tokens_details) totalUsage.prompt_tokens_details = {};
+                    totalUsage.prompt_tokens_details.cached_tokens = (totalUsage.prompt_tokens_details.cached_tokens || 0) + (response.usage.prompt_tokens_details.cached_tokens || 0);
+                    totalUsage.prompt_tokens_details.audio_tokens = (totalUsage.prompt_tokens_details.audio_tokens || 0) + (response.usage.prompt_tokens_details.audio_tokens || 0);
+                }
+
+                if (response.usage.completion_tokens_details) {
+                    if (!totalUsage.completion_tokens_details) totalUsage.completion_tokens_details = {};
+                    totalUsage.completion_tokens_details.reasoning_tokens = (totalUsage.completion_tokens_details.reasoning_tokens || 0) + (response.usage.completion_tokens_details.reasoning_tokens || 0);
+                }
+            }
 
             const choice = response.choices[0];
             const message = choice.message;
@@ -224,6 +249,7 @@ export class Agent {
             toolTime,
             successfulToolCalls,
             failedToolCalls,
+            usage: totalUsage,
         };
     }
 

@@ -261,6 +261,9 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                 // Record metrics
                 sessionManager.addApiTime(response.apiTime);
                 sessionManager.addToolTime(response.toolTime);
+                if (response.usage) {
+                    sessionManager.addUsage(apiClient.currentModel, response.usage);
+                }
                 for (let i = 0; i < response.successfulToolCalls; i++) sessionManager.recordToolCall(true);
                 for (let i = 0; i < response.failedToolCalls; i++) sessionManager.recordToolCall(false);
             } catch (error) {
