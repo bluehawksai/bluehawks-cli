@@ -67,6 +67,21 @@ Parameters:
 ### git_status, git_diff, git_commit, git_log
 Description: Git operations to manage version control.
 
+### find_files
+Description: Find files by name or pattern in a directory.
+Parameters:
+- pattern: (required) The filename pattern to search for (supports wildcards like *.ts).
+- path: (optional) The directory to search in. Defaults to current directory.
+- max_depth: (optional) Maximum depth to search. Default is 5.
+
+### grep_search
+Description: Search for a text pattern (regex) within files.
+Parameters:
+- pattern: (required) The regex pattern to search for.
+- path: (optional) The directory to search in.
+- includes: (optional) File extensions to include (e.g., [".ts", ".js"]).
+
+
 ## Tool Use Guidelines
 
 1.  **Usage Format**: To use a tool, you must use the following XML-wrapped JSON format exactly:
@@ -81,6 +96,11 @@ Description: Git operations to manage version control.
 3.  **Sequential Execution**: You can only use one tool at a time. Wait for the result before using the next tool.
 
 4.  **Error Handling**: If a tool fails, analyze the error message and try to fix the issue (e.g., correcting a path or argument) before giving up.
+
+5.  **Troubleshooting & Recovery**:
+    - **File Not Found**: If a \`read_file\` fails because the file doesn't exist, DO NOT just say "I can't find it". Use \`find_files\` to search for the file by name, or \`list_directory\` to explore.
+    - **Command Failed**: If a command fails, read the error output and try to fix the command or use a different approach.
+
 
 ## Capabilities & Behavior
 
