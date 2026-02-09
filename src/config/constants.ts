@@ -8,7 +8,7 @@ export const DEFAULT_MODEL = 'Qwen/Qwen3-0.6B';
 
 // CLI Metadata
 export const CLI_NAME = 'bluehawks';
-export const CLI_VERSION = '1.0.2';
+export const CLI_VERSION = '1.0.3';
 export const CLI_DESCRIPTION = 'A production-ready multi-agent AI CLI assistant';
 
 // Configuration Paths

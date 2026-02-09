@@ -1,0 +1,20 @@
+{
+  "id": "session_1770634545815_jvwh0o",
+  "startTime": "2026-02-09T10:55:45.815Z",
+  "messages": [
+    {
+      "role": "user",
+      "content": "hi"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! How can I assist you today?"
+    }
+  ],
+  "metadata": {
+    "projectPath": "/home/chandanv/Projects/bluehawks-cli",
+    "model": "Qwen/Qwen3-0.6B",
+    "tokensUsed": 0,
+    "toolsUsed": []
+  }
+}

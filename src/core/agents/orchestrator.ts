@@ -58,6 +58,7 @@ export class Orchestrator {
     private customSystemPrompt?: string;
     private appendSystemPrompt?: string;
     private contextContent: string = '';
+    private rootStructure: string = '';
     private subAgents: Map<string, SubAgentConfig> = new Map();
 
     constructor(options: OrchestratorOptions) {
@@ -112,6 +113,8 @@ export class Orchestrator {
     async initialize(): Promise<void> {
         // Load context file if it exists
         await this.loadContextFile();
+        // Load root directory structure
+        await this.loadRootStructure();
     }
 
     private async loadContextFile(): Promise<void> {
@@ -123,6 +126,19 @@ export class Orchestrator {
         }
     }
 
+    private async loadRootStructure(): Promise<void> {
+        try {
+            const entries = await fs.readdir(this.projectPath, { withFileTypes: true });
+            const list = entries
+                .filter(e => !e.name.startsWith('.') && e.name !== 'node_modules' && e.name !== 'dist')
+                .map(e => `${e.isDirectory() ? '📂' : '📄'} ${e.name}`)
+                .join('\n');
+            this.rootStructure = list;
+        } catch {
+            this.rootStructure = '';
+        }
+    }
+
     private buildSystemPrompt(): string {
         // Use custom system prompt if provided, otherwise default
         let prompt = this.customSystemPrompt || DEFAULT_SYSTEM_PROMPT;
@@ -130,6 +146,10 @@ export class Orchestrator {
         // Append additional prompt content if provided
         if (this.appendSystemPrompt) {
             prompt += `\n\n${this.appendSystemPrompt}`;
+        }
+
+        if (this.rootStructure) {
+            prompt += `\n\n## Current Directory Structure\n${this.rootStructure}\n\nUse this context to understand the project structure and answer questions about the codebase. If the user asks about specific files, use read_file to examine them.`;
         }
 
         if (this.contextContent) {
