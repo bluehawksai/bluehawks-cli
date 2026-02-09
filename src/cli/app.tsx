@@ -19,21 +19,22 @@ import * as os from 'os';
 
 // UI Components
 const Branding = () => (
-    <Text color="#3B82F6" bold>🦅 {CLI_NAME.toUpperCase()} AI</Text>
+    <Box marginBottom={1}>
+        <Text color="#3B82F6" bold>🦅 {CLI_NAME.toUpperCase()} AI</Text>
+        <Text color="gray"> (v{CLI_VERSION})</Text>
+    </Box>
 );
 
-const HeaderBox: React.FC<{ version: string; model: string; projectPath: string }> = ({ version, model, projectPath }) => {
+const Footer: React.FC<{ model: string; projectPath: string }> = ({ model, projectPath }) => {
     const relativePath = projectPath.startsWith(os.homedir())
         ? '~/' + path.relative(os.homedir(), projectPath)
         : projectPath;
 
     return (
-        <Box flexDirection="row" marginX={1}>
-            <Text color="gray">v{version}</Text>
-            <Text color="gray"> | </Text>
-            <Text color="gray">Model: </Text><Text color="white">{model}</Text>
-            <Text color="gray"> | </Text>
-            <Text color="gray">Path: </Text><Text color="white">{relativePath}</Text>
+        <Box flexDirection="row" marginTop={0} paddingTop={0}>
+            <Text color="gray">{relativePath}</Text>
+            <Box flexGrow={1} />
+            <Text color="gray">Auto ({model})</Text>
         </Box>
     );
 };
@@ -48,25 +49,11 @@ const Tips = () => {
     const [tip] = useState(() => tipsList[Math.floor(Math.random() * tipsList.length)]);
 
     return (
-        <Box marginLeft={2}>
+        <Box marginBottom={1}>
             <Text color="gray" dimColor>Tip: {tip}</Text>
         </Box>
     );
 };
-
-const StatusBar: React.FC<{ isYoloMode: boolean }> = ({ isYoloMode }) => (
-    <Box marginTop={0} paddingX={1}>
-        <Box flexGrow={1}>
-            <Text color="gray" dimColor> /help for commands </Text>
-        </Box>
-        {isYoloMode && (
-            <Box>
-                <Text color="#F59E0B" bold>⚡ YOLO</Text>
-            </Box>
-        )}
-    </Box>
-);
-
 
 interface AppProps {
     initialPrompt?: string;
@@ -323,18 +310,11 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
 
     return (
         <Box flexDirection="column" paddingX={1} paddingY={0}>
-            {/* Branding & Header - Compact Row */}
-            <Box flexDirection="row" alignItems="center" marginBottom={0}>
-                <Branding />
-                <HeaderBox
-                    version={CLI_VERSION}
-                    model={apiClient.currentModel}
-                    projectPath={process.cwd()}
-                />
-            </Box>
-            <Box marginBottom={1}>
-                {messages.length === 0 && <Tips />}
-            </Box>
+            {/* Branding - Minimal */}
+            <Branding />
+
+            {/* Tips only shown on start */}
+            {messages.length === 0 && <Tips />}
 
             {/* Messages */}
             <Box flexDirection="column" flexGrow={1} marginBottom={0}>
@@ -405,7 +385,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
 
                 {/* Approval prompt */}
                 {pendingApproval && (
-                    <Box flexDirection="column" borderStyle="round" borderColor="yellow" paddingX={1} marginTop={1}>
+                    <Box flexDirection="column" borderStyle="single" borderColor="yellow" paddingX={1} marginTop={1}>
                         <Text color={COLORS.warning} bold>Action Required: {pendingApproval.toolName}</Text>
                         <Text color="white">Args: {JSON.stringify(pendingApproval.args).substring(0, 100)}...</Text>
                         <Text color="gray">[Y]es / [N]o</Text>
@@ -413,9 +393,12 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                 )}
             </Box>
 
-            {/* Input Area - Compact */}
+            {/* Input Area - Command Bar Style */}
             {!pendingApproval && (
                 <Box flexDirection="column" marginTop={1}>
+                    {/* Separator Line */}
+                    <Box borderStyle="single" borderTop={true} borderBottom={false} borderLeft={false} borderRight={false} borderColor="gray" marginBottom={0} />
+
                     <Box>
                         <Text color={COLORS.primary} bold>❯ </Text>
                         {isProcessing ? (
@@ -429,9 +412,20 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                             />
                         )}
                     </Box>
-                    <StatusBar isYoloMode={isYoloMode} />
+
+                    {/* Yolo Indicator */}
+                    {isYoloMode && (
+                        <Box marginTop={0}>
+                            <Text color="#F59E0B" bold>⚡ YOLO Mode Active</Text>
+                        </Box>
+                    )}
                 </Box>
             )}
+
+            {/* Footer */}
+            <Box marginTop={1}>
+                <Footer model={apiClient.currentModel} projectPath={process.cwd()} />
+            </Box>
         </Box>
     );
 };
