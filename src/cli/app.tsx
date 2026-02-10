@@ -245,10 +245,46 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
             setIsProcessing(true);
             setStreamingContent('');
 
+            let thinkBuffer = ''; // Buffer for tracking think blocks
+            let inThinkBlock = false;
+
             try {
                 const response = await orchestrator.chat(trimmed, [], {
                     onChunk: (chunk) => {
-                        setStreamingContent((prev) => prev + chunk);
+                        // Filter out <think>...</think> blocks for cleaner output
+                        const fullText = thinkBuffer + chunk;
+                        thinkBuffer = '';
+
+                        let output = '';
+                        let i = 0;
+                        while (i < fullText.length) {
+                            if (!inThinkBlock) {
+                                const thinkStart = fullText.indexOf('<think>', i);
+                                if (thinkStart === -1) {
+                                    output += fullText.substring(i);
+                                    break;
+                                } else {
+                                    output += fullText.substring(i, thinkStart);
+                                    inThinkBlock = true;
+                                    i = thinkStart + 7;
+                                }
+                            } else {
+                                const thinkEnd = fullText.indexOf('</think>', i);
+                                if (thinkEnd === -1) {
+                                    // Think block continues, buffer the rest
+                                    thinkBuffer = fullText.substring(i);
+                                    break;
+                                } else {
+                                    inThinkBlock = false;
+                                    i = thinkEnd + 8;
+                                }
+                            }
+                        }
+
+                        // Only update streaming content if we have actual output
+                        if (output) {
+                            setStreamingContent((prev) => prev + output);
+                        }
                     },
                     onToolStart: (name, args?: Record<string, unknown>) => {
                         setCurrentTool(name);
@@ -274,12 +310,18 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
 
                 // Add final response
                 if (response.content) {
-                    setMessages((prev) => [...prev, { role: 'assistant', content: response.content }]);
+                    const cleanContent = response.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+                    if (cleanContent) {
+                        setMessages((prev) => [...prev, { role: 'assistant', content: cleanContent }]);
+                    }
                 }
 
                 // Update session
+                const cleanContent = response.content ? response.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim() : '';
                 sessionManager.addMessage({ role: 'user', content: trimmed });
-                sessionManager.addMessage({ role: 'assistant', content: response.content });
+                if (cleanContent) {
+                    sessionManager.addMessage({ role: 'assistant', content: cleanContent });
+                }
                 response.toolsUsed.forEach((tool) => sessionManager.addToolUsed(tool));
 
                 // Record metrics
