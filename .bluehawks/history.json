@@ -1,31 +1,31 @@
 {
-  "id": "session_1770688533872_h9fk4g",
-  "startTime": "2026-02-10T01:55:33.872Z",
+  "id": "session_1770688666440_xweozi",
+  "startTime": "2026-02-10T01:57:46.440Z",
   "messages": [
     {
       "role": "user",
-      "content": "hi"
+      "content": "exit"
     },
     {
       "role": "assistant",
-      "content": "Hello! How can I assist you today? 😊"
+      "content": "Goodbye! Feel free to reach out anytime. Have a great day! 😊"
     }
   ],
   "metadata": {
     "projectPath": "/home/chandanv/Projects/bluehawks-cli",
     "model": "Qwen/Qwen3-4B-Instruct-2507",
-    "tokensUsed": 1511,
+    "tokensUsed": 1517,
     "toolsUsed": [],
     "successfulToolCalls": 0,
     "failedToolCalls": 0,
-    "apiTime": 2498,
+    "apiTime": 2390,
     "toolTime": 0,
     "modelUsage": {
       "Qwen/Qwen3-4B-Instruct-2507": {
         "inputTokens": 1499,
-        "outputTokens": 12,
+        "outputTokens": 18,
         "cacheReadTokens": 0,
-        "totalTokens": 1511
+        "totalTokens": 1517
       }
     }
   }
