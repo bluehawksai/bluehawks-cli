@@ -189,6 +189,7 @@ function printSummary(stats: SessionStats, sessionId: string) {
     drawRow('');
     drawRow(chalk.bold('Interaction Summary'));
     drawRow(`${chalk.gray('Session ID:')}       ${chalk.white(sessionId)}`);
+    drawRow(`${chalk.gray('Model:')}            ${chalk.cyan(stats.model)}`);
     drawRow(`${chalk.gray('Tool Calls:')}       ${chalk.white(totalTools)} ( ${chalk.green('✓ ' + stats.successfulToolCalls)} x ${chalk.red('x ' + stats.failedToolCalls)} )`);
     drawRow(`${chalk.gray('Success Rate:')}     ${chalk.white(successRate + '%')}`);
     drawRow('');

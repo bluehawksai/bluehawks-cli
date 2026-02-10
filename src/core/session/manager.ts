@@ -41,7 +41,9 @@ export interface SessionStats {
     failedToolCalls: number;
     apiTime: number;
     toolTime: number;
+
     duration: number;
+    model: string;
     modelUsage: Record<string, {
         inputTokens: number;
         outputTokens: number;
@@ -69,7 +71,14 @@ export class SessionManager {
                 failedToolCalls: 0,
                 apiTime: 0,
                 toolTime: 0,
-                modelUsage: {},
+                modelUsage: {
+                    [model]: {
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        cacheReadTokens: 0,
+                        totalTokens: 0,
+                    }
+                },
             },
         };
     }
@@ -166,6 +175,7 @@ export class SessionManager {
             failedToolCalls: this.session.metadata.failedToolCalls,
             apiTime: this.session.metadata.apiTime,
             toolTime: this.session.metadata.toolTime,
+            model: this.session.metadata.model,
             modelUsage: this.session.metadata.modelUsage || {},
             duration,
         };
