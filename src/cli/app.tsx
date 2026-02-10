@@ -403,7 +403,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                         <Box key={i} marginBottom={1} flexDirection="column">
                             <Box>
                                 <Text bold color={getRoleColor(msg.role)}>
-                                    {msg.role === 'user' ? '👤 YOU ' : msg.role === 'assistant' ? '🦅 BLUEHAWKS ' : 'ℹ️ SYSTEM '}
+                                    {msg.role === 'user' ? '👤 YOU ' : msg.role === 'assistant' ? '🦅 BLUEHAWKS AI 🔹 ' : 'ℹ️ SYSTEM '}
                                 </Text>
                             </Box>
                             <Box marginLeft={2}>
@@ -419,7 +419,7 @@ export const App: React.FC<AppProps> = ({ initialPrompt, apiKey, yoloMode = fals
                 {streamingContent && (
                     <Box marginBottom={1} flexDirection="column">
                         <Box>
-                            <Text bold color={COLORS.success}>🦅 BLUEHAWKS </Text>
+                            <Text bold color={COLORS.success}>🦅 BLUEHAWKS AI 🔹 </Text>
                         </Box>
                         <Box marginLeft={2}>
                             <Text color="white">{streamingContent}</Text>
