@@ -276,6 +276,9 @@ program
 
         await waitUntilExit();
 
+        // Give React cleanup a moment to fire and invoke onExit
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         if (finalStats && finalSessionId) {
             printSummary(finalStats, finalSessionId);
         }
