@@ -268,7 +268,6 @@ program
                 apiKey: options.apiKey,
                 yoloMode: options.yolo,
                 onExit: (stats: SessionStats, sid: string) => {
-                    console.log('DEBUG: index.ts onExit received stats');
                     finalStats = stats;
                     finalSessionId = sid;
                 },
@@ -276,7 +275,6 @@ program
         );
 
         await waitUntilExit();
-        console.log('DEBUG: waitUntilExit resolved', { hasStats: !!finalStats });
 
         if (finalStats && finalSessionId) {
             printSummary(finalStats, finalSessionId);
